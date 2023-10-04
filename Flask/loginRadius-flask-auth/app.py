@@ -1,4 +1,7 @@
-import jwt, os
+from auth_middleware import token_required
+from models import Books, User
+import jwt
+import os
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from save_image import save_pic
@@ -7,16 +10,15 @@ from validate import validate_book, validate_email_and_password, validate_user
 load_dotenv()
 
 app = Flask(__name__)
-SECRET_KEY = os.environ.get('SECRET_KEY') or 'this is a secret'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 print(SECRET_KEY)
 app.config['SECRET_KEY'] = SECRET_KEY
 
-from models import Books, User
-from auth_middleware import token_required
 
 @app.route("/")
 def hello():
     return "Hello World!"
+
 
 @app.route("/users/", methods=["POST"])
 def add_user():
@@ -49,6 +51,7 @@ def add_user():
             "data": None
         }, 500
 
+
 @app.route("/users/login", methods=["POST"])
 def login():
     try:
@@ -60,7 +63,8 @@ def login():
                 "error": "Bad request"
             }, 400
         # validate input
-        is_validated = validate_email_and_password(data.get('email'), data.get('password'))
+        is_validated = validate_email_and_password(
+            data.get('email'), data.get('password'))
         if is_validated is not True:
             return dict(message='Invalid data', data=None, error=is_validated), 400
         user = User().login(
@@ -91,9 +95,9 @@ def login():
         }, 404
     except Exception as e:
         return {
-                "message": "Something went wrong!",
-                "error": str(e),
-                "data": None
+            "message": "Something went wrong!",
+            "error": str(e),
+            "data": None
         }, 500
 
 
@@ -104,6 +108,7 @@ def get_current_user(current_user):
         "message": "successfully retrieved user profile",
         "data": current_user
     })
+
 
 @app.route("/users/", methods=["PUT"])
 @token_required
@@ -128,6 +133,7 @@ def update_user(current_user):
             "data": None
         }), 400
 
+
 @app.route("/users/", methods=["DELETE"])
 @token_required
 def disable_user(current_user):
@@ -143,6 +149,7 @@ def disable_user(current_user):
             "error": str(e),
             "data": None
         }), 400
+
 
 @app.route("/books/", methods=["POST"])
 @token_required
@@ -161,7 +168,8 @@ def add_book(current_user):
                 "data": None
             }, 400
 
-        book["image_url"] = request.host_url+"static/books/"+save_pic(request.files["cover_image"])
+        book["image_url"] = request.host_url+"static/books/" + \
+            save_pic(request.files["cover_image"])
         is_validated = validate_book(**book)
         if is_validated is not True:
             return {
@@ -187,6 +195,7 @@ def add_book(current_user):
             "data": None
         }), 500
 
+
 @app.route("/books/", methods=["GET"])
 @token_required
 def get_books(current_user):
@@ -202,6 +211,7 @@ def get_books(current_user):
             "error": str(e),
             "data": None
         }), 500
+
 
 @app.route("/books/<book_id>", methods=["GET"])
 @token_required
@@ -225,6 +235,7 @@ def get_book(book_id):
             "data": None
         }), 500
 
+
 @app.route("/books/<book_id>", methods=["PUT"])
 @token_required
 def update_book(current_user, book_id):
@@ -238,7 +249,8 @@ def update_book(current_user, book_id):
             }, 404
         book = request.form
         if book.get('cover_image'):
-            book["image_url"] = request.host_url+"static/books/"+save_pic(request.files["cover_image"])
+            book["image_url"] = request.host_url+"static/books/" + \
+                save_pic(request.files["cover_image"])
         book = Books().update(book_id, **book)
         return jsonify({
             "message": "successfully updated a book",
@@ -250,6 +262,7 @@ def update_book(current_user, book_id):
             "error": str(e),
             "data": None
         }), 400
+
 
 @app.route("/books/<book_id>", methods=["DELETE"])
 @token_required
@@ -274,6 +287,7 @@ def delete_book(current_user, book_id):
             "data": None
         }), 400
 
+
 @app.errorhandler(403)
 def forbidden(e):
     return jsonify({
@@ -281,6 +295,7 @@ def forbidden(e):
         "error": str(e),
         "data": None
     }), 403
+
 
 @app.errorhandler(404)
 def forbidden(e):

@@ -6,10 +6,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
-DATABASE_URL=os.environ.get('DATABASE_URL') or 'mongodb://localhost:27017/myDatabase'
-print(DATABASE_URL)
+DATABASE_URL=os.environ.get('DATABASE_URL')
 client = MongoClient(DATABASE_URL)
-db = client.myDatabase
+db = client.get_default_database()
 
 class Books:
     """Books Model"""
@@ -106,7 +105,7 @@ class User:
         user = self.get_by_email(email)
         if user:
             return
-        new_user = db.users.insert_one(
+        new_user = db.user.insert_one(
             {
                 "name": name,
                 "email": email,
@@ -118,12 +117,12 @@ class User:
 
     def get_all(self):
         """Get all users"""
-        users = db.users.find({"active": True})
+        users = db.user.find({"active": True})
         return [{**user, "_id": str(user["_id"])} for user in users]
 
     def get_by_id(self, user_id):
         """Get a user by id"""
-        user = db.users.find_one({"_id": bson.ObjectId(user_id), "active": True})
+        user = db.user.find_one({"_id": bson.ObjectId(user_id), "active": True})
         if not user:
             return
         user["_id"] = str(user["_id"])
@@ -132,7 +131,7 @@ class User:
 
     def get_by_email(self, email):
         """Get a user by email"""
-        user = db.users.find_one({"email": email, "active": True})
+        user = db.user.find_one({"email": email, "active": True})
         if not user:
             return
         user["_id"] = str(user["_id"])
@@ -143,7 +142,7 @@ class User:
         data = {}
         if name:
             data["name"] = name
-        user = db.users.update_one(
+        user = db.user.update_one(
             {"_id": bson.ObjectId(user_id)},
             {
                 "$set": data
@@ -155,13 +154,13 @@ class User:
     def delete(self, user_id):
         """Delete a user"""
         Books().delete_by_user_id(user_id)
-        user = db.users.delete_one({"_id": bson.ObjectId(user_id)})
+        user = db.user.delete_one({"_id": bson.ObjectId(user_id)})
         user = self.get_by_id(user_id)
         return user
 
     def disable_account(self, user_id):
         """Disable a user account"""
-        user = db.users.update_one(
+        user = db.user.update_one(
             {"_id": bson.ObjectId(user_id)},
             {"$set": {"active": False}}
         )
